@@ -1,17 +1,17 @@
 [deployment-server]
-192.168.12.110 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}} home_path=/root project_path=/root/4devop_project
+192.168.12.110 ansible_ssh_pass=supinf0) ansible_sudo_pass=supinf0) home_path=/root project_path=/root/4devop_project
 
 [app-server]
-192.168.12.121 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}}
+192.168.12.121 ansible_ssh_pass=Supinf0) ansible_sudo_pass=Supinf0)
 
 [registry]
-192.168.12.122 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}} 
+192.168.12.122 ansible_ssh_pass=Supinf0) ansible_sudo_pass=Supinf0) 
 
 [code-repo]
-192.168.12.123 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}}
+192.168.12.123 ansible_ssh_pass=Supinf0) ansible_sudo_pass=Supinf0)
 
 [server_for_docker]
-192.168.1.121 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}}
-192.168.1.122 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}}
-192.168.1.123 ansible_ssh_pass={{password}} ansible_sudo_pass={{password}}
+192.168.1.121 ansible_ssh_pass=Supinf0) ansible_sudo_pass=Supinf0)
+192.168.1.122 ansible_ssh_pass=Supinf0) ansible_sudo_pass=Supinf0)
+192.168.1.123 ansible_ssh_pass=Supinf0) ansible_sudo_pass=Supinf0)
 192.168.1.122 ansible_connection=local
