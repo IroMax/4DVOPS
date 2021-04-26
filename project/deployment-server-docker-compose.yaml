@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  jenkins-docker-ansible-clair:
+    image: dirane/jenkins-docker-ansible-clair
+    container_name: depoloyment-server
+    ports:
+          - "8080:8080"
+          - "5000:5000"
+          - "443:8443"
+

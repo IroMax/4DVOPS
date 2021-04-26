@@ -1,0 +1,210 @@
+############ Install Docker ############
+
+- name: Install docker
+  hosts: server_for_docker
+  tags:
+    - instalL_docker
+
+  pre_tasks:
+    - name: Install epel-release
+      yum:
+        name: epel-release
+        state: latest
+
+    - name: install the 'Development tools' package group
+      yum:
+        name: "@Development tools"
+        state: present
+
+    - name: Python-devel
+      yum:
+        name: python-devel
+        state: present
+
+    - name: Install python pip
+      yum:
+        name: python-pip
+        state: latest
+
+    - name: Install docker
+      pip:
+        name: docker
+
+  tasks:
+    - include_role:
+        name: docker-setup-role
+
+############ DEPLOY REGISTRY ############
+
+- name: Deploy registry, private docker registry
+  hosts: registry
+  tags:
+    - deploy-registry
+
+  tasks:
+    - name: Deploy private registry task
+      docker_container:
+        name: registry-ctn
+        image: registry
+        state: started
+        ports:
+          - "8000:5000"
+
+    - name: Deploy docker registry frontend task
+      docker_container:
+        name: registry-frontend-ctn
+        state: started
+        image: konradkleine/docker-registry-frontend:v2
+        ports:
+          - "80:80"
+        env:
+          ENV_DOCKER_REGISTRY_HOST: registry-ctn
+          ENV_DOCKER_REGISTRY_PORT: "5000"
+          FRONTEND_BROWSE_ONLY_MODE: "false"
+
+    - name: Create a registry-network network and connect containers
+      docker_network:
+        name: registry-network
+        connected:
+          - registry-ctn
+          - registry-frontend-ctn
+
+############ DEPLOY STUDENT LIST  ############
+
+- name: Install requirements, Build api and studentlist
+  hosts: deployment-server
+  tags:
+    - deploy_student_list
+
+  pre_tasks:
+    - name: install Docker compose task in local
+      pip:
+        name: docker
+        state: present
+
+    - name: Docker-compose installation task in local
+      pip:
+        name: docker-compose
+        state: present
+
+  tasks:
+    - name: Build docker compose yaml file task
+      docker_compose:
+        project_src: "{{project_path}}/app_student_list"
+        build: yes
+      register: output
+
+############ Run app ############
+
+- name: Run applications
+  hosts: app-server
+  become: true
+  tags:
+    - run_app
+
+  tasks:
+    - name: copy files to app host
+      copy:
+        src: "{{project_path}}/app_student_list"
+        dest: "{{home_path}}"
+
+    - name: RUN api and app docker compose
+      docker_compose:
+        project_src: "{{home_path}}/app_student_list"
+        files: run-docker-compose.yml
+      register: output
+
+############ TEST STUDENT LIST ############
+
+- name: curl check
+  hosts: deployment-server
+  tags:
+    - test_student_list
+
+  tasks:
+    - name: Run check api
+      shell:
+        cmd: curl -u toto:python -X GET http://localhost:5002/pozos/api/v1.0/get_student_ages
+
+############ Scan Clair ############
+
+- name: Clair Scan - Security testing
+  hosts: deployment-server
+  tags:
+    - scan_clair
+  tasks:
+    - name: Run clair task
+      docker_compose:
+        project_src: "{{project_path}}/clair"
+        build: yes
+      register: output
+
+    - name: Run clair job
+      shell: |
+        if clair-scanner --clair="http://clair:6060" --ip deployment-server simple-api:latest
+        then
+          exit 1
+        else
+          exit 0
+        fi
+
+############ Push images on registry ############
+
+- name: Push images on registry
+  hosts: deployment-server
+  tags:
+    - push_images
+  tasks:
+    - name: Push api to docker private registry task
+      docker_image:
+        name: 192.168.1.122:8000/simple-api
+        tag: v1
+        push: yes
+        source: local
+
+    - name: Tag php apache app image and push to registry task
+      docker_image:
+        name: php:apache
+        repository: 192.168.1.122:8000/php:apache
+        force_tag: yes
+        push: yes
+        source: local
+
+############ E2E test ############
+
+- name: run the security test to ensure the application is secure (E2E Tests)
+  hosts: app-server
+  tags:
+    - e2e_test
+  tasks:
+    - name: Pull gauntlt/gauntlt image
+      docker_image:
+        name: gauntlt/gauntlt
+        source: pull
+
+    - name: copy attack file to app vm
+      copy:
+        src: "{{project_path}}/xss.attack"
+        dest: "{{home_path}}/xss.attack"
+
+    - name: Run security testing to studentlist app
+      shell:
+        cmd: "docker run -t --rm=true -v {{home_path}}:/working -w /working gauntlt/gauntlt ./xss.attack"
+
+############ Scan splunk ############
+
+- name: Deploy Splunk container
+  hosts: deployment-server
+  tags:
+    - scan_splunk
+  tasks:
+    - name: Deploy Splunk task
+      docker_container:
+        name: splunk
+        image: splunk/splunk
+        ports:
+          - "8000:8000"
+          - "9998:9997"
+        env:
+          SPLUNK_START_ARGS: "--accept-license"
+          SPLUNK_PASSWORD: Supinf0!
