@@ -1,8 +1,8 @@
 pipeline {
   agent any
   environment{
-    GROUPE_NAME=".groupe_name";
-    INSTALL_VM=".install_vm.yml";
+    GROUPE_NAME="groupe_name";
+    INSTALL_VM="install_vm.yml";
     INSTALL_DOCKER = "instalL_docker"
     DEPLOY_REGISTRY = "deploy-registry"
     DEPLOY_STUDENT_LIST = "deploy_student_list"
